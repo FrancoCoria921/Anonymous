@@ -4,7 +4,8 @@
 	"description": "InfoSec project for freeCodeCamp",
 	"main": "server.js",
 	"scripts": {
-		"start": "node server.js"
+		"start": "node server.js",
+		"test": "NODE_ENV=test mocha tests/2_functional-tests.js --timeout 10000"
 	},
 	"dependencies": {
 		"body-parser": "^1.15.2",
