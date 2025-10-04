@@ -1,179 +1,117 @@
-"use strict";
-const express = require('express');
-const router = express.Router();
-const { Message } = require("../models/message");
+/*
+*
+*
+*       Complete the API routing below
+*
+*
+*/
 
-// POST para crear nuevo hilo - CORREGIDO
-router.post("/threads/:board", async (req, res) => {
-  try {
-    const { text, test, delete_password } = req.body; // Acepta tanto 'text' como 'test'
-    const board = req.params.board;
+'use strict';
 
-    const newThread = new Message({
-      board,
-      text: text || test, // Usa 'text' si existe, sino 'test'
-      delete_password,
-      created_on: new Date(),
-      bumped_on: new Date(),
-      reported: false,
-      replies: []
-    });
+var expect = require('chai').expect;
+const mongoose = require('mongoose');
+const database = require('./database.js');
 
-    const savedThread = await newThread.save();
-    res.json(savedThread);
-  } catch (error) {
-    res.status(500).json({ error: "Error creando hilo" });
-  }
+/* Mongoose setup - start*/
+mongoose.set('strictQuery', false);
+
+const dbUrl = process.env.NODE_ENV === 'test' ? process.env.TEST_MONGO_URI : process.env.MONGO_URI;
+
+if (!dbUrl) {
+  console.error('❌ Error: MONGO_URI no configurado. Variables disponibles:', Object.keys(process.env).filter(key => key.includes('MONGO')));
+  process.exit(1);
+}
+
+console.log('🔗 Conectando a MongoDB...');
+mongoose.connect(dbUrl, { 
+  useNewUrlParser: true,
+  useUnifiedTopology: true 
+}).then(() => {
+  console.log('✅ Conectado exitosamente a MongoDB');
+}).catch(err => {
+  console.error('❌ Error conectando a MongoDB:', err.message);
 });
 
-// GET para obtener los 10 hilos más recientes - CORREGIDO
-router.get("/threads/:board", async (req, res) => {
-  try {
-    const board = req.params.board;
-    
-    const threads = await Message.find({ board })
-      .sort({ bumped_on: -1 })
-      .limit(10)
-      .select('-reported -delete_password -replies.reported -replies.delete_password')
-      .lean();
+let Schema = mongoose.Schema
 
-    // Limitar a 3 respuestas más recientes por hilo
-    threads.forEach(thread => {
-      thread.replycount = thread.replies.length;
-      thread.replies = thread.replies.slice(-3).reverse();
-    });
+const repliesSchema = new Schema({
+  text: String,
+  created_on: {type: Date, default: new Date()},
+  delete_password: String,
+  reported: {type: Boolean, default: true}
+})
 
-    res.json(threads);
-  } catch (error) {
-    res.status(500).json({ error: "Error obteniendo hilos" });
-  }
-});
+const threadSchema = new Schema({
+  text: String,
+  created_on: {type: Date, default: new Date()},
+  bumped_on: {type: Date, default: new Date()},
+  reported: {type: Boolean, default: false},
+  delete_password: String,
+  replies: [repliesSchema],
+  replycount: {type: Number, default: 0}
+})
 
-// DELETE para eliminar hilo - CORREGIDO
-router.delete("/threads/:board", async (req, res) => {
-  try {
-    const { thread_id, delete_password } = req.body;
+function thread(boardName) {return mongoose.model(boardName, threadSchema, boardName)}
+/* Mongoose setup - end */
 
-    const thread = await Message.findById(thread_id);
-    if (!thread) {
-      return res.send("thread not found");
-    }
-
-    if (thread.delete_password !== delete_password) {
-      return res.send("incorrect password");
-    }
-
-    await Message.findByIdAndDelete(thread_id);
-    res.send("success");
-  } catch (error) {
-    res.status(500).json({ error: "Error eliminando hilo" });
-  }
-});
-
-// PUT para reportar un hilo - CORREGIDO (usa thread_id)
-router.put("/threads/:board", async (req, res) => {
-  try {
-    const { thread_id } = req.body; // ← USA thread_id, no report_id
-    await Message.findByIdAndUpdate(thread_id, { reported: true });
-    res.send("reported"); // ← Respuesta EXACTA que espera la prueba
-  } catch (error) {
-    res.status(500).json({ error: "Error reportando hilo" });
-  }
-});
-
-// POST para crear nueva respuesta - CORREGIDO
-router.post("/replies/:board", async (req, res) => {
-  try {
-    const { text, delete_password, thread_id } = req.body;
-    const board = req.params.board;
-
-    const newReply = {
-      text,
-      delete_password,
-      created_on: new Date(),
-      reported: false
-    };
-
-    const updatedThread = await Message.findByIdAndUpdate(
-      thread_id,
-      {
-        $push: { replies: newReply },
-        $set: { bumped_on: new Date() }
-      },
-      { new: true }
-    );
-
-    res.json(updatedThread);
-  } catch (error) {
-    res.status(500).json({ error: "Error creando respuesta" });
-  }
-});
-
-// GET para obtener un hilo específico con todas sus respuestas - CORREGIDO
-router.get("/replies/:board", async (req, res) => {
-  try {
-    const { thread_id } = req.query; // ← USA req.query para GET
-
-    const thread = await Message.findById(thread_id)
-      .select('-reported -delete_password -replies.reported -replies.delete_password');
-
-    if (!thread) {
-      return res.status(404).json({ error: "Hilo no encontrado" });
-    }
-
-    res.json(thread);
-  } catch (error) {
-    res.status(500).json({ error: "Error obteniendo respuestas" });
-  }
-});
-
-// DELETE para eliminar respuesta - CORREGIDO
-router.delete("/replies/:board", async (req, res) => {
-  try {
-    const { thread_id, reply_id, delete_password } = req.body;
-
-    const thread = await Message.findById(thread_id);
-    if (!thread) {
-      return res.send("thread not found");
-    }
-
-    const reply = thread.replies.id(reply_id);
-    if (!reply) {
-      return res.send("reply not found");
-    }
-
-    if (reply.delete_password !== delete_password) {
-      return res.send("incorrect password");
-    }
-
-    // Cambia el texto a "[deleted]" en lugar de eliminar
-    reply.text = "[deleted]";
-    await thread.save();
-
-    res.send("success");
-  } catch (error) {
-    res.status(500).json({ error: "Error eliminando respuesta" });
-  }
-});
-
-// PUT para reportar una respuesta - CORREGIDO
-router.put("/replies/:board", async (req, res) => {
-  try {
-    const { thread_id, reply_id } = req.body;
-
-    const thread = await Message.findById(thread_id);
-    if (thread) {
-      const reply = thread.replies.id(reply_id);
-      if (reply) {
-        reply.reported = true;
-        await thread.save();
+module.exports = function (app) {
+  
+  app.route('/api/threads/:board')
+    .get((req, res) => {
+      database.showAll(thread(req.params.board.toLowerCase()), res)
+    })
+  
+    .post((req, res) => {
+      if (!req.body.hasOwnProperty('text') || !req.body.hasOwnProperty('delete_password')) {
+        return res.type('text').send('incorrect query')
       }
-    }
+    
+      let document = new thread(req.params.board.toLowerCase())({
+        text: req.body.text,
+        reported: false,
+        created_on: new Date(),
+        bumped_on: new Date(),
+        delete_password: req.body.delete_password
+      })
 
-    res.send("reported"); // ← Respuesta EXACTA que espera la prueba
-  } catch (error) {
-    res.status(500).json({ error: "Error reportando respuesta" });
-  }
-});
+      database.createThread(document, res, req.params.board.toLowerCase())
+    })
+  
+    .put((req, res) => {
+      if (!req.body.hasOwnProperty('thread_id')) return res.type('text').send('incorrect query')
+    
+      database.reportThread(thread(req.params.board.toLowerCase()), req.body.thread_id, res)
+    })
+  
+    .delete((req, res) => {
+      if (!req.body.hasOwnProperty('thread_id') || !req.body.hasOwnProperty('delete_password')) {
+        return res.type('text').send('incorrect query')
+      }
+    
+      database.deleteThread(thread(req.params.board.toLowerCase()), req.body.thread_id, req.body.delete_password, res)
+    });
+    
+  app.route('/api/replies/:board')
+    .get((req, res) => {
+      if (!req.query.hasOwnProperty('thread_id')) return res.type('text').send('incorrect query') 
+    
+      database.showThread(thread(req.params.board.toLowerCase()), req.query.thread_id, res)
+    })
+  
+    .post((req, res) => {
+      if (!req.body.hasOwnProperty('thread_id') || (!req.body.hasOwnProperty('text') || !req.body.hasOwnProperty('delete_password') )) {
+        return res.type('text').send('incorrect query')
+      }
+    
+      database.createPost(thread(req.params.board.toLowerCase()), req.body, res, req.params.board.toLowerCase())
+    })
+  
+    .put((req, res) => {
+      database.reportPost(thread(req.params.board.toLowerCase()), req.body.thread_id, req.body.reply_id, res)
+    })
+  
+    .delete((req, res) => {
+      database.deletePost(thread(req.params.board.toLowerCase()), req.body.thread_id, req.body.reply_id, req.body.delete_password, res)
+    });
 
-module.exports = router;
+};
