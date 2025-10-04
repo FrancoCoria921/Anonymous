@@ -192,7 +192,8 @@ module.exports = function (app) {
         {new: true}
       ).exec((err, data) => {
         if (err || !data) return res.type('text').send('Thread not found');
-        res.redirect('/b/' + board + '/' + thread_id + '?reply_id=' + data.replies[data.replies.length - 1]._id);
+        const newReplyId = data.replies[data.replies.length - 1]._id;
+        res.redirect('/b/' + board + '/' + thread_id + '?_id=' + newReplyId);
       });
     })
   
