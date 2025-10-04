@@ -1,28 +1,25 @@
 let mongoose = require("mongoose");
-//let mongodb = require("mongodb");
 
-mongoose.connect(process.env.DB, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-});
+// ✅ Conexión simplificada - las opciones ya no son necesarias :cite[4]
+mongoose.connect(process.env.DB);
 
 let messageSchema = new mongoose.Schema({
   board: String,
   text: String,
-  created_on: Date,
-  bumped_on: Date,
-  reported: Boolean,
+  created_on: { type: Date, default: Date.now },
+  bumped_on: { type: Date, default: Date.now },
+  reported: { type: Boolean, default: false },
   delete_password: String,
   replies: [
     {
       text: String,
-      created_on: Date,
+      created_on: { type: Date, default: Date.now },
       delete_password: String,
-      reported: Boolean
+      reported: { type: Boolean, default: false }
     }
   ]
 });
 
-let Message = mongoose.model("message", messageSchema);
+let Message = mongoose.model("Message", messageSchema);
 
 exports.Message = Message;
