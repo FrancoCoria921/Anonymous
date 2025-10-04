@@ -74,7 +74,6 @@ router.delete("/threads/:board", async (req, res) => {
 router.put("/threads/:board", async (req, res) => {
   try {
     const { thread_id } = req.body; // ← USA thread_id, no report_id
-    
     await Message.findByIdAndUpdate(thread_id, { reported: true });
     res.send("reported"); // ← Respuesta EXACTA que espera la prueba
   } catch (error) {
