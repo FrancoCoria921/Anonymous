@@ -9,240 +9,239 @@
 'use strict';
 
 var expect = require('chai').expect;
-const mongoose = require('mongoose');
-
-/* Mongoose setup - start*/
-mongoose.set('strictQuery', false);
-
-const dbUrl = process.env.NODE_ENV === 'test' ? process.env.TEST_MONGO_URI : process.env.MONGO_URI;
-
-if (!dbUrl) {
-  console.error('❌ Error: MONGO_URI no configurado. Variables disponibles:', Object.keys(process.env).filter(key => key.includes('MONGO')));
-  process.exit(1);
-}
-
-console.log('🔗 Conectando a MongoDB...');
-mongoose.connect(dbUrl, { 
-  useNewUrlParser: true,
-  useUnifiedTopology: true 
-}).then(() => {
-  console.log('✅ Conectado exitosamente a MongoDB');
-}).catch(err => {
-  console.error('❌ Error conectando a MongoDB:', err.message);
-});
-
-let Schema = mongoose.Schema
-
-const repliesSchema = new Schema({
-  text: String,
-  created_on: {type: Date, default: new Date()},
-  delete_password: String,
-  reported: {type: Boolean, default: false}
-})
-
-const threadSchema = new Schema({
-  text: String,
-  created_on: {type: Date, default: new Date()},
-  bumped_on: {type: Date, default: new Date()},
-  reported: {type: Boolean, default: false},
-  delete_password: String,
-  replies: [repliesSchema],
-  replycount: {type: Number, default: 0}
-})
-
-function thread(boardName) {return mongoose.model(boardName, threadSchema, boardName)}
-/* Mongoose setup - end */
+let mongoose = require('mongoose');
 
 module.exports = function (app) {
-  
-  app.route('/api/threads/:board')
-    .get((req, res) => {
-      const board = req.params.board.toLowerCase();
-      const Thread = thread(board);
-      
-      Thread.find({}).sort({bumped_on: -1}).limit(10).exec((err, data) => {
-        if (err) return res.type('text').send(err.message);
-        
-        const threads = data.map((thread) => {
-          return {
-            _id: thread._id,
-            text: thread.text,
-            created_on: thread.created_on,
-            bumped_on: thread.bumped_on,
-            replies: thread.replies.slice(-3).map(reply => ({
-              _id: reply._id,
-              text: reply.text,
-              created_on: reply.created_on
-            })),
-            replycount: thread.replies.length
-          };
-        });
-        res.json(threads);
-      });
-    })
-  
-    .post((req, res) => {
-      if (!req.body.hasOwnProperty('text') || !req.body.hasOwnProperty('delete_password')) {
-        return res.type('text').send('incorrect query')
-      }
-    
-      const board = req.params.board.toLowerCase();
-      const Thread = thread(board);
-      let document = new Thread({
-        text: req.body.text,
-        reported: false,
-        created_on: new Date(),
-        bumped_on: new Date(),
-        delete_password: req.body.delete_password,
-        replies: []
-      });
 
-      document.save((err, data) => {
-        if (err) throw err;
-        res.redirect(`/b/${board}?_id=${data._id}`);
-      });
-    })
-  
-    .put((req, res) => {
-      if (!req.body.hasOwnProperty('thread_id')) return res.type('text').send('incorrect query')
-    
-      const board = req.params.board.toLowerCase();
-      const Thread = thread(board);
-      const thread_id = req.body.thread_id.replace(/\s/g, '');
-      
-      Thread.findByIdAndUpdate(thread_id, {reported: true}, (err, data) => {
-        if (err || !data) return res.type('text').send('incorrect board or id');
-        res.type('text').send('reported');
-      });
-    })
-  
-    .delete((req, res) => {
-      if (!req.body.hasOwnProperty('thread_id') || !req.body.hasOwnProperty('delete_password')) {
-        return res.type('text').send('incorrect query')
-      }
-    
-      const board = req.params.board.toLowerCase();
-      const Thread = thread(board);
-      const thread_id = req.body.thread_id.replace(/\s/g, '');
-      const delete_password = req.body.delete_password;
-      
-      Thread.findById(thread_id, (err, data) => {
-        if (err || !data) return res.type('text').send('incorrect board or id');
-        
-        if (data.delete_password === delete_password) {
-          Thread.deleteOne({_id: thread_id}, (err) => {
-            if (err) return res.type('text').send(err.message);
-            res.type('text').send('success');
-          });
-        } else {
-          res.type('text').send('incorrect password');
-        }
-      });
-    });
-    
-  app.route('/api/replies/:board')
-    .get((req, res) => {
-      if (!req.query.hasOwnProperty('thread_id')) return res.type('text').send('incorrect query') 
-    
-      const board = req.params.board.toLowerCase();
-      const Thread = thread(board);
-      const thread_id = req.query.thread_id.replace(/\s/g, '');
-      
-      Thread.findById(thread_id, (err, data) => {
-        if (err || !data) return res.type('text').send('thread not found');
-        
-        const result = {
-          _id: data._id,
-          text: data.text,
-          created_on: data.created_on,
-          bumped_on: data.bumped_on,
-          replies: data.replies.map(reply => ({
-            _id: reply._id,
-            text: reply.text,
-            created_on: reply.created_on
-          })),
-          replycount: data.replies.length
-        };
-        res.json(result);
-      });
-    })
-  
-    .post((req, res) => {
-      if (!req.body.hasOwnProperty('thread_id') || !req.body.hasOwnProperty('text') || !req.body.hasOwnProperty('delete_password')) {
-        return res.type('text').send('incorrect query')
-      }
-    
-      const board = req.params.board.toLowerCase();
-      const Thread = thread(board);
-      const thread_id = req.body.thread_id;
-      const newReply = {
-        text: req.body.text,
-        created_on: new Date(),
-        delete_password: req.body.delete_password,
-        reported: false
-      };
-      
-      Thread.findByIdAndUpdate(
-        thread_id, 
-        {
-          bumped_on: new Date(), 
-          $inc: {replycount: 1}, 
-          $push: {replies: newReply}
-        },
-        {new: true}
-      ).exec((err, data) => {
-        if (err || !data) return res.type('text').send('Thread not found');
-        res.redirect('/b/' + board + '/' + thread_id + '?reply_id=' + data.replies[data.replies.length - 1]._id);
-      });
-    })
-  
-    .put((req, res) => {
-      if (!req.body.hasOwnProperty('thread_id') || !req.body.hasOwnProperty('reply_id')) {
-        return res.type('text').send('incorrect query')
-      }
+	const dbUrl = process.env.NODE_ENV === 'test' ? process.env.TEST_MONGO_URI : process.env.MONGO_URI;
 
-      const board = req.params.board.toLowerCase();
-      const Thread = thread(board);
-      const thread_id = req.body.thread_id.replace(/\s/g, '');
-      const reply_id = req.body.reply_id.replace(/\s/g, '');
-      
-      Thread.updateOne(
-        {_id: thread_id, 'replies._id': reply_id}, 
-        {'replies.$.reported': true}, 
-        (err, data) => {
-          if (err || data.matchedCount === 0) return res.type('text').send('incorrect board or id');
-          res.type('text').send('reported');
-        }
-      );
-    })
-  
-    .delete((req, res) => {
-      if (!req.body.hasOwnProperty('thread_id') || !req.body.hasOwnProperty('reply_id') || !req.body.hasOwnProperty('delete_password')) {
-        return res.type('text').send('incorrect query')
-      }
+	if (!dbUrl) {
+		console.error('❌ Error: MONGO_URI no configurado. Variables disponibles:', Object.keys(process.env).filter(key => key.includes('MONGO')));
+		process.exit(1);
+	}
 
-      const board = req.params.board.toLowerCase();
-      const Thread = thread(board);
-      const thread_id = req.body.thread_id.replace(/\s/g, '');
-      const reply_id = req.body.reply_id.replace(/\s/g, '');
-      const delete_password = req.body.delete_password;
-      
-      Thread.findById(thread_id, (err, data) => {
-        if (err || !data) return res.type('text').send('incorrect board or thread id');
-        
-        let reply = data.replies.id(reply_id);
-        if (!reply) return res.type('text').send('incorrect post id');
+	console.log('🔗 Conectando a MongoDB...');
+	mongoose.connect(dbUrl, { useNewUrlParser: true, useUnifiedTopology: true }).then(() => {
+		console.log('✅ Conectado exitosamente a MongoDB');
+	}).catch(err => {
+		console.error('❌ Error conectando a MongoDB:', err.message);
+	});
 
-        if (reply.delete_password === delete_password) {
-          reply.text = '[deleted]';
-          data.save((err) => {
-            if (err) return res.type('text').send(err.message);
-            res.type('text').send('success');
-          });
-        } else {
-          res.type('text').send('incorrect password');
-        }
-      });
-    });
+	let replySchema = new mongoose.Schema({
+		text: {type: String, required: true},
+		delete_password: {type: String, required: true},
+		createdon_: {type: Date, required: true},
+		reported: {type: Boolean, required: true}
+	})
+
+	let threadSchema = new mongoose.Schema({
+		text: {type: String, required: true},
+		delete_password: {type: String, required: true},
+		board: {type: String, required: true},
+		createdon_: {type: Date, required: true},
+		bumpedon_: {type: Date, required: true},
+		reported: {type: Boolean, required: true},
+		replies: [replySchema]
+	})
+
+	let Reply = mongoose.model('Reply', replySchema)
+	let Thread = mongoose.model('Thread', threadSchema)
+
+	app.post('/api/threads/:board', (request, response) => {
+		let newThread = new Thread(request.body)
+		if(!newThread.board || newThread.board === ''){
+			newThread.board = request.params.board
+		}
+		newThread.createdon_ = new Date().toUTCString()
+		newThread.bumpedon_ = new Date().toUTCString()
+		newThread.reported = false
+		newThread.replies = []
+		newThread.save((error, savedThread) => {
+			if(!error && savedThread){
+				return response.redirect('/b/' + savedThread.board + '/' + savedThread.id)
+			}
+		})
+	})
+
+	app.post('/api/replies/:board', (request, response) => {
+		let newReply = new Reply(request.body)
+		newReply.createdon_ = new Date().toUTCString()
+		newReply.reported = false
+		Thread.findByIdAndUpdate(
+			request.body.thread_id,
+			{$push: {replies: newReply}, bumpedon_: new Date().toUTCString()},
+			{new: true},
+			(error, updatedThread) => {
+				if(!error && updatedThread){
+					response.redirect('/b/' + updatedThread.board + '/' + updatedThread.id + '?new_reply_id=' + newReply.id)
+				}
+			}
+		)
+	})
+
+	app.get('/api/threads/:board', (request, response) => {
+		Thread.find({board: request.params.board})
+			.sort({bumpedon_: 'desc'})
+			.limit(10)
+			.select('-delete_password -reported')
+			.lean()
+			.exec((error, arrayOfThreads) => {
+				if(!error && arrayOfThreads){
+					
+					arrayOfThreads.forEach((thread) => {
+
+						thread['replycount'] = thread.replies.length
+
+						/* Sort Replies by Date */
+						thread.replies.sort((thread1, thread2) => {
+							return thread2.createdon_ - thread1.createdon_
+						})
+
+						/* Limit Replies to 3 */
+						thread.replies = thread.replies.slice(0, 3)
+
+						/* Remove Delete Pass from Replies */
+						thread.replies.forEach((reply) => {
+							reply.delete_password = undefined
+							reply.reported = undefined
+						})
+
+					})
+
+					return response.json(arrayOfThreads)
+
+				}
+			})
+
+	})
+
+	app.get('/api/replies/:board', (request, response) => {
+
+		Thread.findById(
+			request.query.thread_id,
+			(error, thread) => {
+				if(!error && thread){
+					thread.delete_password = undefined
+					thread.reported = undefined
+
+					thread['replycount'] = thread.replies.length
+
+					/* Sort Replies by Date */
+					thread.replies.sort((thread1, thread2) => {
+						return thread2.createdon_ - thread1.createdon_
+					})
+
+					/* Remove Delete Pass from Replies */
+					thread.replies.forEach((reply) => {
+						reply.delete_password = undefined
+						reply.reported = undefined
+					})
+
+					return response.json(thread)
+
+				}
+			}
+		)
+
+	})
+
+	app.delete('/api/threads/:board', (request, response) => {
+
+		Thread.findById(
+			request.body.thread_id,
+			(error, threadToDelete) => {
+				if(!error && threadToDelete){
+					if(threadToDelete.delete_password === request.body.delete_password){
+
+						Thread.findByIdAndRemove(
+							request.body.thread_id,
+							(error, deletedThread) => {
+								if(!error && deletedThread){
+									return response.json('success')
+								}
+							}
+						)
+
+					}else{
+						return response.json('incorrect password')
+					}
+
+				}else{
+					return response.json('Thread not found')
+				}
+
+			}
+		)
+
+	})
+
+	app.delete('/api/replies/:board', (request, response) => {
+
+		Thread.findById(
+			request.body.thread_id,
+			(error, threadToUpdate) => {
+				if(!error && threadToUpdate){
+
+					let i
+					for (i = 0; i < threadToUpdate.replies.length; i++){
+						if(threadToUpdate.replies[i].id === request.body.reply_id){
+							if(threadToUpdate.replies[i].delete_password === request.body.delete_password){
+								threadToUpdate.replies[i].text = '[deleted]'
+							}else{
+								return response.json('incorrect password')
+							}
+						}
+					}
+
+					threadToUpdate.save((error, updatedThread) => {
+						if(!error && updatedThread){
+							return response.json('success')
+						}
+					})
+
+				}else{
+					return response.json('Thread not found')
+				}
+			}
+		)
+	})
+
+	app.put('/api/threads/:board', (request, response) => {
+
+		Thread.findByIdAndUpdate(
+			request.body.thread_id,
+			{reported: true},
+			{new: true},
+			(error, updatedThread) => {
+				if(!error && updatedThread){
+					return response.json('success')
+				}
+			}
+		)
+	})
+
+	app.put('/api/replies/:board', (request, response) => {
+		Thread.findById(
+			request.body.thread_id,
+			(error, threadToUpdate) => {
+			if(!error && threadToUpdate){
+
+				let i
+				for (i = 0; i < threadToUpdate.replies.length; i++) {
+					if(threadToUpdate.replies[i].id === request.body.reply_id){
+						threadToUpdate.replies[i].reported = true
+					}
+				}
+
+				threadToUpdate.save((error, updatedThread) => {
+					if(!error && updatedThread){
+						return response.json('success')
+					}
+				})
+
+			}
+			}
+		)
+	})
 
 };
