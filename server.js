@@ -42,7 +42,7 @@ app.route('/')
 fccTestingRoutes(app);
 
 //Routing for API 
-app.use('/api', apiRoutes);
+apiRoutes(app);
 
 //404 Not Found Middleware
 app.use(function(req, res, next) {
