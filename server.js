@@ -67,7 +67,7 @@ app.route('/')
 fccTestingRoutes(app);
 
 // Routing for API 
-apiRoutes(app);
+app.use('/api', apiRoutes);
 
 // ✅ Middleware para Manejo de Errores CORS
 app.use((err, req, res, next) => {
