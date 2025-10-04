@@ -7,7 +7,7 @@
 */
 
 'use strict';
-
++mongoose.set('strictQuery', false);
 var expect = require('chai').expect;
 let mongoose = require('mongoose');
 
