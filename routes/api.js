@@ -112,7 +112,7 @@ module.exports = function (app) {
       
       Thread.findByIdAndUpdate(thread_id, {reported: true}, (err, data) => {
         if (err || !data) return res.type('text').send('incorrect board or id');
-        res.type('text').send('Success');
+        res.type('text').send('reported');
       });
     })
   
@@ -132,10 +132,10 @@ module.exports = function (app) {
         if (data.delete_password === delete_password) {
           Thread.deleteOne({_id: thread_id}, (err) => {
             if (err) return res.type('text').send(err.message);
-            res.type('text').send('Success');
+            res.type('text').send('success');
           });
         } else {
-          res.type('text').send('Incorrect Password');
+          res.type('text').send('incorrect password');
         }
       });
     });
@@ -211,7 +211,7 @@ module.exports = function (app) {
         {'replies.$.reported': true}, 
         (err, data) => {
           if (err || data.matchedCount === 0) return res.type('text').send('incorrect board or id');
-          res.type('text').send('Success');
+          res.type('text').send('reported');
         }
       );
     })
@@ -237,10 +237,10 @@ module.exports = function (app) {
           reply.text = '[deleted]';
           data.save((err) => {
             if (err) return res.type('text').send(err.message);
-            res.type('text').send('Success');
+            res.type('text').send('success');
           });
         } else {
-          res.type('text').send('Incorrect Password');
+          res.type('text').send('incorrect password');
         }
       });
     });
