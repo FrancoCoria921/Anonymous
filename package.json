@@ -1,5 +1,6 @@
 {
-  "name": "anonymous-message-board",
+  "name  "dependencies": {
+    "body-parser": "^1.15.2","anonymous-message-board",
   "version": "1.0.0",
   "description": "Anonymous Message Board - FreeCodeCamp Information Security Project",
   "main": "server.js",
