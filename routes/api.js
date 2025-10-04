@@ -6,12 +6,12 @@ const { Message } = require("../models/message");
 // POST para crear nuevo hilo - CORREGIDO
 router.post("/threads/:board", async (req, res) => {
   try {
-    const { text, delete_password } = req.body;
+    const { text, test, delete_password } = req.body; // Acepta tanto 'text' como 'test'
     const board = req.params.board;
 
     const newThread = new Message({
       board,
-      text,
+      text: text || test, // Usa 'text' si existe, sino 'test'
       delete_password,
       created_on: new Date(),
       bumped_on: new Date(),
@@ -76,7 +76,7 @@ router.put("/threads/:board", async (req, res) => {
     const { thread_id } = req.body; // ← USA thread_id, no report_id
     
     await Message.findByIdAndUpdate(thread_id, { reported: true });
-    res.send("reported"); // ← Respuesta EXACTA que espera la prueba
+    res.send("success"); // ← Respuesta EXACTA que espera la prueba
   } catch (error) {
     res.status(500).json({ error: "Error reportando hilo" });
   }
