@@ -76,7 +76,7 @@ router.put("/threads/:board", async (req, res) => {
     const { thread_id } = req.body; // ← USA thread_id, no report_id
     
     await Message.findByIdAndUpdate(thread_id, { reported: true });
-    res.send("success"); // ← Respuesta EXACTA que espera la prueba
+    res.send("reported"); // ← Respuesta EXACTA que espera la prueba
   } catch (error) {
     res.status(500).json({ error: "Error reportando hilo" });
   }
@@ -171,7 +171,7 @@ router.put("/replies/:board", async (req, res) => {
       }
     }
 
-    res.send("success"); // ← Respuesta EXACTA que espera la prueba
+    res.send("reported"); // ← Respuesta EXACTA que espera la prueba
   } catch (error) {
     res.status(500).json({ error: "Error reportando respuesta" });
   }
