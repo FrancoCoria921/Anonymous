@@ -99,7 +99,7 @@ module.exports = function (app) {
 
       document.save((err, data) => {
         if (err) throw err;
-        res.redirect(`/b/${board}?_id=${data._id}`);
+        res.redirect(`/b/${board}/${data._id}`);
       });
     })
   
@@ -193,7 +193,7 @@ module.exports = function (app) {
       ).exec((err, data) => {
         if (err || !data) return res.type('text').send('Thread not found');
         const newReplyId = data.replies[data.replies.length - 1]._id;
-        res.redirect('/b/' + board + '/' + thread_id + '?_id=' + newReplyId);
+        res.redirect(`/b/${board}/${thread_id}`);
       });
     })
   
