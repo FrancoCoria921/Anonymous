@@ -19,14 +19,12 @@ app.use(helmet.referrerPolicy({ policy: 'same-origin' }));
 // Servir archivos estáticos
 app.use('/public', express.static(process.cwd() + '/public'));
 
-// ✅ CONFIGURACIÓN CORS MEJORADA PARA PRODUCCIÓN
+// Configuración CORS para producción
 const corsOptions = {
   origin: function (origin, callback) {
-    // Permite solicitudes sin 'origin' y en entorno de desarrollo
     if (!origin || process.env.NODE_ENV !== 'production') {
       callback(null, true);
     } else {
-      // En producción, verifica contra dominios permitidos
       const allowedOrigins = [
         process.env.YOUR_FRONTEND_URL,
         'http://localhost:3000'
@@ -66,10 +64,10 @@ app.route('/')
 // For FCC testing purposes
 fccTestingRoutes(app);
 
-// Routing for API 
-apiRoutes(app);
+// Routing for API - CORREGIDO
+app.use('/api', apiRoutes);
 
-// ✅ Middleware para Manejo de Errores CORS
+// Middleware para Manejo de Errores CORS
 app.use((err, req, res, next) => {
   if (err.message === 'Origen no permitido por CORS') {
     res.status(403).json({ 

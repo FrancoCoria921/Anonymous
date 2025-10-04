@@ -3,11 +3,11 @@ const express = require('express');
 const router = express.Router();
 const { Message } = require("../models/message");
 
-// POST para crear nuevo hilo
+// POST para crear nuevo hilo en un board
 router.post("/threads/:board", async (req, res) => {
   try {
     const { text, delete_password } = req.body;
-    const board = req.params.board;
+    const { board } = req.params;
 
     const newThread = new Message({
       board,
@@ -26,10 +26,10 @@ router.post("/threads/:board", async (req, res) => {
   }
 });
 
-// GET para obtener los 10 hilos más recientes
+// GET para obtener los 10 hilos más recientes de un board
 router.get("/threads/:board", async (req, res) => {
   try {
-    const board = req.params.board;
+    const { board } = req.params;
     
     const threads = await Message.find({ board })
       .sort({ bumped_on: -1 })
@@ -49,7 +49,7 @@ router.get("/threads/:board", async (req, res) => {
   }
 });
 
-// DELETE para eliminar hilo
+// DELETE para eliminar hilo (con verificación de contraseña)
 router.delete("/threads/:board", async (req, res) => {
   try {
     const { thread_id, delete_password } = req.body;
@@ -86,7 +86,7 @@ router.put("/threads/:board", async (req, res) => {
 router.post("/replies/:board", async (req, res) => {
   try {
     const { text, delete_password, thread_id } = req.body;
-    const board = req.params.board;
+    const { board } = req.params;
 
     const newReply = {
       text,
@@ -128,7 +128,7 @@ router.get("/replies/:board", async (req, res) => {
   }
 });
 
-// DELETE para eliminar respuesta
+// DELETE para eliminar respuesta (con verificación de contraseña)
 router.delete("/replies/:board", async (req, res) => {
   try {
     const { thread_id, reply_id, delete_password } = req.body;
