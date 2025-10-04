@@ -1,7 +1,15 @@
 let mongoose = require("mongoose");
 
-// Conexión simplificada - sin opciones obsoletas
-mongoose.connect(process.env.DB);
+// Configuración para eliminar warnings de deprecación
+mongoose.set('useFindAndModify', false);
+mongoose.set('useCreateIndex', true);
+mongoose.set('useUnifiedTopology', true);
+
+// Conexión con opciones modernas
+mongoose.connect(process.env.DB, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+});
 
 let messageSchema = new mongoose.Schema({
   board: String,
