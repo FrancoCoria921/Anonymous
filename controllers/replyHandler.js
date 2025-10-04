@@ -1,82 +1,91 @@
-let mongoose = require("mongoose");
-let Message = require("../models/message").Message;
+const { Message } = require("../models/message");
 
-exports.postReply = async (req, res, next) => {
+exports.postReply = async (req, res) => {
   try {
-    let board = req.params.board;
-    let foundBoard = await Message.findById(req.body.thread_id);
-    foundBoard.bumpes_on = new Date().toUTCString();
-    let allReplies = [...foundBoard.replies];
-    foundBoard.replies.push({
-      text: req.body.text,
-      created_on: new Date().toUTCString(),
-      delete_password: req.body.delete_password,
-      reported: false
-    });
+    const { text, delete_password, thread_id } = req.body;
+    const board = req.params.board;
 
-    await foundBoard.save();
-    return res.redirect("/b/" + board + "/" + req.body.thread_id);
-  } catch (err) {
-    res.json("error");
+    const newReply = {
+      text,
+      delete_password,
+      created_on: new Date(),
+      reported: false
+    };
+
+    const updatedThread = await Message.findByIdAndUpdate(
+      thread_id,
+      {
+        $push: { replies: newReply },
+        $set: { bumped_on: new Date() }
+      },
+      { new: true }
+    );
+
+    res.json(updatedThread);
+  } catch (error) {
+    res.status(500).json({ error: "Error creando respuesta" });
   }
 };
 
 exports.getReply = async (req, res) => {
   try {
-    let board = req.params.board;
-    await Message.findById(req.query.thread_id, async (err, thread) => {
-      if (!err && thread) {
-        thread.delete_password = undefined;
-        thread.reported = undefined;
-        thread.replycount = thread.replies.length;
+    const { thread_id } = req.query;
 
-        thread.replies.forEach(reply => {
-          reply.delete_password = undefined;
-          reply.reported = undefined;
-        });
+    const thread = await Message.findById(thread_id)
+      .select('-reported -delete_password -replies.reported -replies.delete_password');
 
-        return res.json(thread);
-      }
-    });
-  } catch (err) {
-    res.json("error");
+    if (!thread) {
+      return res.status(404).json({ error: "Hilo no encontrado" });
+    }
+
+    res.json(thread);
+  } catch (error) {
+    res.status(500).json({ error: "Error obteniendo respuestas" });
   }
 };
 
 exports.deleteReply = async (req, res) => {
   try {
-    let foundThread = await Message.findById(req.body.thread_id);
-    foundThread.replies.forEach(async ele => {
-      if (
-        ele._id == req.body.reply_id &&
-        ele.delete_password == req.body.delete_password
-      ) {
-        ele.text = "[deleted]";
-        await foundThread.save();
-        return res.send("success");
-      } else if (
-        ele._id == req.body.reply_id &&
-        ele.delete_password != req.body.delete_password
-      ) {
-        return res.send("incorrect password");
-      }
-    });
-  } catch (err) {
-    res.json("error");
+    const { thread_id, reply_id, delete_password } = req.body;
+
+    const thread = await Message.findById(thread_id);
+    if (!thread) {
+      return res.send("thread not found");
+    }
+
+    const reply = thread.replies.id(reply_id);
+    if (!reply) {
+      return res.send("reply not found");
+    }
+
+    if (reply.delete_password !== delete_password) {
+      return res.send("incorrect password");
+    }
+
+    reply.text = "[deleted]";
+    await thread.save();
+
+    res.send("success");
+  } catch (error) {
+    res.status(500).json({ error: "Error eliminando respuesta" });
   }
 };
 
 exports.putReply = async (req, res) => {
   try {
-    let foundThread = await Message.findById(req.body.thread_id);
-    await foundThread.replies.forEach(ele => {
-      if (ele._id == req.body.reply_id) {
-        ele.reported = true;
-        foundThread.save();
-        return res.send("success");
+    const { thread_id, reply_id } = req.body;
+
+    const thread = await Message.findById(thread_id);
+    if (thread) {
+      const reply = thread.replies.id(reply_id);
+      if (reply) {
+        reply.reported = true;
+        await thread.save();
       }
-    });
-  } catch (err) {
-    res.json("error");
+    }
+
+    res.send("success");
+  } catch (error) {
+    res.status(500).json({ error: "Error reportando respuesta" });
   }
 };

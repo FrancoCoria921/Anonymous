@@ -1,6 +1,6 @@
 let mongoose = require("mongoose");
 
-// ✅ Conexión simplificada - las opciones ya no son necesarias :cite[4]
+// ✅ Conexión simplificada - las opciones obsoletas fueron eliminadas
 mongoose.connect(process.env.DB);
 
 let messageSchema = new mongoose.Schema({

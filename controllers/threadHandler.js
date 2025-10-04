@@ -1,80 +1,75 @@
-let mongoose = require("mongoose");
-let Message = require("../models/message").Message;
+const { Message } = require("../models/message");
 
-exports.postThread = async (req, res, next) => {
+exports.postThread = async (req, res) => {
   try {
-    let board = req.params.board;
+    const { text, delete_password } = req.body;
+    const board = req.params.board;
 
-    let newThread = await Message.create({
-      board: board,
-      text: req.body.text,
+    const newThread = new Message({
+      board,
+      text,
+      delete_password,
       created_on: new Date(),
       bumped_on: new Date(),
       reported: false,
-      delete_password: req.body.delete_password,
       replies: []
     });
 
-    return res.redirect("/b/" + board);
-  } catch (err) {
-    return res.json("error");
+    const savedThread = await newThread.save();
+    res.json(savedThread);
+  } catch (error) {
+    res.status(500).json({ error: "Error creando hilo" });
   }
 };
 
 exports.getThread = async (req, res) => {
   try {
-    let board = req.params.board;
-    await Message.find({ board: board })
-      .sort({ bumped_on: "desc" })
+    const board = req.params.board;
+    
+    const threads = await Message.find({ board })
+      .sort({ bumped_on: -1 })
       .limit(10)
-      .lean()
-      .exec((err, threadArray) => {
-        if (!err && threadArray) {
-          threadArray.forEach(ele => {
-            ele.replycount = ele.replies.length;
+      .select('-reported -delete_password -replies.reported -replies.delete_password')
+      .lean();
 
-            ele.replies.sort((a, b) => {
-              return b.created_on - a.created_on;
-            });
+    threads.forEach(thread => {
+      thread.replycount = thread.replies.length;
+      thread.replies = thread.replies.slice(-3).reverse();
+    });
 
-            //limit replies to 3
-            ele.replies = ele.replies.slice(0, 3);
-
-            /*ele.replies.forEach(reply => {
-              reply.delete_password = undefined;
-              reply.reported = undefined;
-            });*/
-          });
-          return res.json(threadArray);
-        }
-      });
-  } catch (err) {
-    return res.json("error");
+    res.json(threads);
+  } catch (error) {
+    res.status(500).json({ error: "Error obteniendo hilos" });
   }
 };
 
 exports.deleteThread = async (req, res) => {
   try {
-    let board = req.params.board;
-    let deletedThread = await Message.findById(req.body.thread_id);
-    if (req.body.delete_password === deletedThread.delete_password) {
-      await deletedThread.delete();
-      return res.send("success");
-    } else {
+    const { thread_id, delete_password } = req.body;
+
+    const thread = await Message.findById(thread_id);
+    if (!thread) {
+      return res.send("thread not found");
+    }
+
+    if (thread.delete_password !== delete_password) {
       return res.send("incorrect password");
     }
-  } catch (err) {
-    res.json("error");
+
+    await Message.findByIdAndDelete(thread_id);
+    res.send("success");
+  } catch (error) {
+    res.status(500).json({ error: "Error eliminando hilo" });
   }
 };
 
 exports.putThread = async (req, res) => {
   try {
-    let updateThread = await Message.findById(req.body.thread_id);
-    updateThread.reported = true;
-    await updateThread.save();
-    return res.send("success");
-  } catch (err) {
-    res.json("error");
+    const { thread_id } = req.body;
+    
+    await Message.findByIdAndUpdate(thread_id, { reported: true });
+    res.send("reported");
+  } catch (error) {
+    res.status(500).json({ error: "Error reportando hilo" });
   }
 };

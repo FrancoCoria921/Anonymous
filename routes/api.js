@@ -3,11 +3,11 @@ const express = require('express');
 const router = express.Router();
 const { Message } = require("../models/message");
 
-// POST para crear nuevo hilo en un board
+// POST para crear nuevo hilo
 router.post("/threads/:board", async (req, res) => {
   try {
     const { text, delete_password } = req.body;
-    const { board } = req.params;
+    const board = req.params.board;
 
     const newThread = new Message({
       board,
@@ -19,17 +19,17 @@ router.post("/threads/:board", async (req, res) => {
       replies: []
     });
 
-    await newThread.save();
-    res.redirect(`/b/${board}`);
+    const savedThread = await newThread.save();
+    res.json(savedThread);
   } catch (error) {
     res.status(500).json({ error: "Error creando hilo" });
   }
 });
 
-// GET para obtener los 10 hilos más recientes de un board
+// GET para obtener los 10 hilos más recientes
 router.get("/threads/:board", async (req, res) => {
   try {
-    const { board } = req.params;
+    const board = req.params.board;
     
     const threads = await Message.find({ board })
       .sort({ bumped_on: -1 })
@@ -37,7 +37,7 @@ router.get("/threads/:board", async (req, res) => {
       .select('-reported -delete_password -replies.reported -replies.delete_password')
       .lean();
 
-    // Limitar a 3 respuestas más recientes por hilo
+    // Limitar a 3 respuestas más recientes por hilo y añadir replycount
     threads.forEach(thread => {
       thread.replycount = thread.replies.length;
       thread.replies = thread.replies.slice(-3).reverse();
@@ -49,7 +49,7 @@ router.get("/threads/:board", async (req, res) => {
   }
 });
 
-// DELETE para eliminar hilo (con verificación de contraseña)
+// DELETE para eliminar hilo
 router.delete("/threads/:board", async (req, res) => {
   try {
     const { thread_id, delete_password } = req.body;
@@ -86,7 +86,7 @@ router.put("/threads/:board", async (req, res) => {
 router.post("/replies/:board", async (req, res) => {
   try {
     const { text, delete_password, thread_id } = req.body;
-    const { board } = req.params;
+    const board = req.params.board;
 
     const newReply = {
       text,
@@ -95,7 +95,7 @@ router.post("/replies/:board", async (req, res) => {
       reported: false
     };
 
-    await Message.findByIdAndUpdate(
+    const updatedThread = await Message.findByIdAndUpdate(
       thread_id,
       {
         $push: { replies: newReply },
@@ -104,7 +104,7 @@ router.post("/replies/:board", async (req, res) => {
       { new: true }
     );
 
-    res.redirect(`/b/${board}/${thread_id}`);
+    res.json(updatedThread);
   } catch (error) {
     res.status(500).json({ error: "Error creando respuesta" });
   }
@@ -128,7 +128,7 @@ router.get("/replies/:board", async (req, res) => {
   }
 });
 
-// DELETE para eliminar respuesta (con verificación de contraseña)
+// DELETE para eliminar respuesta
 router.delete("/replies/:board", async (req, res) => {
   try {
     const { thread_id, reply_id, delete_password } = req.body;

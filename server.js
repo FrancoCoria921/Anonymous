@@ -11,7 +11,7 @@ const runner = require('./test-runner');
 
 const app = express();
 
-// Configuración de Seguridad con Helmet :cite[1]
+// Configuración de Seguridad con Helmet
 app.use(helmet.frameguard({ action: 'sameorigin' }));
 app.use(helmet.dnsPrefetchControl({ allow: false }));
 app.use(helmet.referrerPolicy({ policy: 'same-origin' }));
@@ -19,17 +19,17 @@ app.use(helmet.referrerPolicy({ policy: 'same-origin' }));
 // Servir archivos estáticos
 app.use('/public', express.static(process.cwd() + '/public'));
 
-// ✅ CONFIGURACIÓN CORS MEJORADA PARA PRODUCCIÓN :cite[1]
+// ✅ CONFIGURACIÓN CORS MEJORADA PARA PRODUCCIÓN
 const corsOptions = {
   origin: function (origin, callback) {
-    // Permite solicitudes sin 'origin' (como apps móviles o curl) y en entorno de desarrollo
+    // Permite solicitudes sin 'origin' y en entorno de desarrollo
     if (!origin || process.env.NODE_ENV !== 'production') {
       callback(null, true);
     } else {
       // En producción, verifica contra dominios permitidos
       const allowedOrigins = [
-        process.env.YOUR_FRONTEND_URL, // Tu dominio en Railway
-        'http://localhost:3000'        // Para desarrollo local
+        process.env.YOUR_FRONTEND_URL,
+        'http://localhost:3000'
       ].filter(Boolean);
       
       if (allowedOrigins.includes(origin)) {
@@ -67,7 +67,7 @@ app.route('/')
 fccTestingRoutes(app);
 
 // Routing for API 
-app.use('/api', apiRoutes);
+apiRoutes(app);
 
 // ✅ Middleware para Manejo de Errores CORS
 app.use((err, req, res, next) => {
