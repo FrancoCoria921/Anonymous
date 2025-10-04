@@ -18,15 +18,16 @@ chai.use(chaiHttp);
 suite('Functional Tests', function() {
 
   // Limpiar la base de datos antes de cada prueba
-  beforeEach(async function () {
-    // Limpiar la colección de pruebas 'test'
-    if (mongoose.connection.db) {
-      await mongoose.connection.db.collection('test').deleteMany({});
-      await mongoose.connection.db.collection('testEmpty').deleteMany({});
+  this.timeout(5000);
+  
+  before(function(done) {
+    // Esperar a que la conexión esté lista
+    if (mongoose.connection.readyState === 1) {
+      done();
+    } else {
+      mongoose.connection.on('connected', done);
     }
   });
-
-suite('Functional Tests', function() {
 
   suite('API ROUTING FOR /api/threads/:board', function() {
     
@@ -433,7 +434,5 @@ suite('Functional Tests', function() {
     });
     
   });
-
-});
 
 });
