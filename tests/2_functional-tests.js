@@ -115,62 +115,6 @@ suite('Functional Tests', function() {
       })
     });
     
-    suite('DELETE', function() {
-      test('Delete a thread with incomplete query at /API/THREADS/{BOARD}', done => {
-        chai.request(server)
-        .delete('/api/threads/test')
-        .send({delete_password: 'incorrect password'})
-        .end((err, res) => {
-          assert.equal(res.status, 200, 'Status OK')
-          assert.equal(res.text, 'incorrect query', 'Incorrect query was used')
-          done()
-        })
-      })
-      
-      test('Delete a thread with no query at /API/THREADS/{BOARD}', done => {
-        chai.request(server)
-        .delete('/api/threads/test')
-        .end((err, res) => {
-          assert.equal(res.status, 200, 'Status OK')
-          assert.equal(res.text, 'incorrect query', 'Incorrect query was used')
-          done()
-        })
-      })
-      
-      test('Delete a thread with incorrect password at /API/THREADS/{BOARD}', done => {
-        chai.request(server)
-        .delete('/api/threads/test')
-        .send({thread_id: id_1, delete_password: 'incorrect password'})
-        .end((err, res) => {
-          assert.equal(res.status, 200, 'Status OK')
-          assert.equal(res.text, 'incorrect password', 'Incorrect password was entered')
-          done()
-        })
-      })
-      
-      test('Delete a thread with incorrect id at /API/THREADS/{BOARD}', done => {
-        chai.request(server)
-        .delete('/api/threads/test')
-        .send({thread_id: 'invalid id', delete_password: 'correct password'})
-        .end((err, res) => {
-          assert.equal(res.status, 200, 'Status OK')
-          assert.equal(res.text, 'incorrect board or id', 'Incorrect is or board was entered')
-          done()
-        })
-      })
-      
-      test('Delete a thread at /API/THREADS/{BOARD}', done => {
-        chai.request(server)
-        .delete('/api/threads/test')
-        .send({thread_id: id_1, delete_password: 'correct password'})
-        .end((err, res) => {
-          assert.equal(res.status, 200, 'Status OK')
-          assert.equal(res.text, 'success', 'Succesfully deleted thread')
-          done()
-        })
-      })
-    });
-    
     suite('PUT', function() {
       test('Reporting thread with no query at /API/THREADS/{BOARD}', done => {
         chai.request(server)
@@ -433,6 +377,65 @@ suite('Functional Tests', function() {
       })
     });
     
+  });
+
+  // DELETE threads should be at the end after all reply tests
+  suite('API ROUTING FOR /api/threads/:board - DELETE', function() {
+    suite('DELETE', function() {
+      test('Delete a thread with incomplete query at /API/THREADS/{BOARD}', done => {
+        chai.request(server)
+        .delete('/api/threads/test')
+        .send({delete_password: 'incorrect password'})
+        .end((err, res) => {
+          assert.equal(res.status, 200, 'Status OK')
+          assert.equal(res.text, 'incorrect query', 'Incorrect query was used')
+          done()
+        })
+      })
+      
+      test('Delete a thread with no query at /API/THREADS/{BOARD}', done => {
+        chai.request(server)
+        .delete('/api/threads/test')
+        .end((err, res) => {
+          assert.equal(res.status, 200, 'Status OK')
+          assert.equal(res.text, 'incorrect query', 'Incorrect query was used')
+          done()
+        })
+      })
+      
+      test('Delete a thread with incorrect password at /API/THREADS/{BOARD}', done => {
+        chai.request(server)
+        .delete('/api/threads/test')
+        .send({thread_id: id_1, delete_password: 'incorrect password'})
+        .end((err, res) => {
+          assert.equal(res.status, 200, 'Status OK')
+          assert.equal(res.text, 'incorrect password', 'Incorrect password was entered')
+          done()
+        })
+      })
+      
+      test('Delete a thread with incorrect id at /API/THREADS/{BOARD}', done => {
+        chai.request(server)
+        .delete('/api/threads/test')
+        .send({thread_id: 'invalid id', delete_password: 'correct password'})
+        .end((err, res) => {
+          assert.equal(res.status, 200, 'Status OK')
+          assert.equal(res.text, 'incorrect board or id', 'Incorrect is or board was entered')
+          done()
+        })
+      })
+      
+      test('Delete a thread at /API/THREADS/{BOARD}', done => {
+        chai.request(server)
+        .delete('/api/threads/test')
+        .send({thread_id: id_1, delete_password: 'correct password'})
+        .end((err, res) => {
+          assert.equal(res.status, 200, 'Status OK')
+          assert.equal(res.text, 'success', 'Succesfully deleted thread')
+          done()
+        })
+      })
+    });
   });
 
 });
