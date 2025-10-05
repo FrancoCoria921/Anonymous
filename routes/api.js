@@ -189,6 +189,7 @@ module.exports = function (app) {
       const Thread = thread(board);
       const thread_id = req.body.thread_id;
       const newReply = {
+        _id: new mongoose.Types.ObjectId(),
         text: req.body.text,
         created_on: new Date(),
         delete_password: req.body.delete_password,
