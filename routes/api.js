@@ -33,6 +33,15 @@ mongoose.connect(dbUrl, {
   // No hacer process.exit aquí para evitar que el servidor termine
 });
 
+// Manejar eventos de error de mongoose
+mongoose.connection.on('error', (err) => {
+  console.error('❌ Error de conexión MongoDB:', err.message);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('⚠️ MongoDB desconectado');
+});
+
 let Schema = mongoose.Schema
 
 const repliesSchema = new Schema({
