@@ -18,7 +18,8 @@ const dbUrl = process.env.NODE_ENV === 'test' ? process.env.TEST_MONGO_URI : pro
 
 if (!dbUrl) {
   console.error('❌ Error: MONGO_URI no configurado. Variables disponibles:', Object.keys(process.env).filter(key => key.includes('MONGO')));
-  process.exit(1);
+  // En lugar de process.exit, lanzar un error que se pueda manejar
+  throw new Error('MONGO_URI no configurado');
 }
 
 console.log('🔗 Conectando a MongoDB...');
@@ -29,6 +30,7 @@ mongoose.connect(dbUrl, {
   console.log('✅ Conectado exitosamente a MongoDB');
 }).catch(err => {
   console.error('❌ Error conectando a MongoDB:', err.message);
+  // No hacer process.exit aquí para evitar que el servidor termine
 });
 
 let Schema = mongoose.Schema
