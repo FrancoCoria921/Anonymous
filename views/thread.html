@@ -60,7 +60,7 @@
             thread.push(
               '<form id="deleteThread"><input type="hidden" value="' +
                 ele._id +
-                '" name="thread_id" required=""><input type="text" placeholder="password" name="delete_password" required="" class="input"><input type="submit" value="Delete" class="btn"></form>'
+                '" name="thread_id" required=""><input type="text" placeholder="password" name="delete_password" id="threadDeletePassword_' + ele._id + '" required="" class="input"><input type="submit" value="Delete" class="btn"></form>'
             );
             thread.push("<h3>" + ele.text + "</h3>");
             thread.push('</div><div class="replies">');
@@ -81,7 +81,7 @@
                   ele._id +
                   '" name="thread_id" required=""><input type="hidden" value="' +
                   rep._id +
-                  '" name="reply_id" required=""><input type="text" placeholder="password" name="delete_password" required="" class="input"><input type="submit" value="Delete" class="btn"></form>'
+                  '" name="reply_id" required=""><input type="text" placeholder="password" name="delete_password" id="replyDeletePassword_' + rep._id + '" required="" class="input"><input type="submit" value="Delete" class="btn"></form>'
               );
               thread.push("<h3>" + rep.text + "</h3>");
               thread.push("</div>");
@@ -96,10 +96,10 @@
               '<input type="hidden" name="thread_id" value="' + ele._id + '">'
             );
             thread.push(
-              '<textarea rows="5" cols="80" type="text" placeholder="Quick reply..." name="text" required=""></textarea><br>'
+              '<textarea rows="5" cols="80" type="text" placeholder="Quick reply..." name="text" id="newReplyText_' + ele._id + '" required=""></textarea><br>'
             );
             thread.push(
-              '<input type="text" placeholder="password to delete" name="delete_password" required="" class="input"><input style="margin-left: 5px" type="submit" value="Submit" class="btn">'
+              '<input type="text" placeholder="password to delete" name="delete_password" id="newReplyPassword_' + ele._id + '" required="" class="input"><input style="margin-left: 5px" type="submit" value="Submit" class="btn">'
             );
             thread.push("</form></div></div></div>");
             boardThreads.push(thread.join(""));
