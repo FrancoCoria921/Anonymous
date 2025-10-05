@@ -99,7 +99,10 @@ module.exports = function (app) {
       });
 
       document.save((err, data) => {
-        if (err) throw err;
+        if (err) {
+          console.error('Error saving thread:', err);
+          return res.type('text').send('Error saving thread');
+        }
         res.redirect(`/b/${board}?_id=${data._id}`);
       });
     })
