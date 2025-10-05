@@ -46,8 +46,7 @@ const threadSchema = new Schema({
   bumped_on: {type: Date, default: new Date()},
   reported: {type: Boolean, default: false},
   delete_password: String,
-  replies: [repliesSchema],
-  replycount: {type: Number, default: 0}
+  replies: [repliesSchema]
 })
 
 function thread(boardName) {return mongoose.model(boardName, threadSchema, boardName)}
@@ -99,7 +98,7 @@ module.exports = function (app) {
 
       document.save((err, data) => {
         if (err) throw err;
-        res.redirect(`/b/${board}/${data._id}`);
+        res.redirect(`/b/${board}?_id=${data._id}`);
       });
     })
   
@@ -186,14 +185,13 @@ module.exports = function (app) {
         thread_id, 
         {
           bumped_on: new Date(), 
-          $inc: {replycount: 1}, 
           $push: {replies: newReply}
         },
         {new: true}
       ).exec((err, data) => {
         if (err || !data) return res.type('text').send('Thread not found');
         const newReplyId = data.replies[data.replies.length - 1]._id;
-        res.redirect(`/b/${board}/${thread_id}`);
+        res.redirect(`/b/${board}/${thread_id}?_id=${newReplyId}`);
       });
     })
   
